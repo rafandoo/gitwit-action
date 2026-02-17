@@ -24,4 +24,4 @@ jobs:
           context: .
           push: false
           file: src/main/docker/Dockerfile
-          tags: $[github.repository]:pr-${{ github.event.number }}
+          tags: ${{ github.repository }}:pr-${{ github.event.number }}
