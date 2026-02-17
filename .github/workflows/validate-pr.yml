@@ -1,0 +1,27 @@
+name: Validate Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-image:
+    name: Build Docker Image for PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6.19.2
+        with:
+          context: .
+          push: false
+          file: src/main/docker/Dockerfile
+          tags: $[github.repository]:pr-${{ github.event.number }}
