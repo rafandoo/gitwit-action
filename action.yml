@@ -1,0 +1,21 @@
+name: 'GitWit Action'
+description: 'Run GitWit lint or changelog'
+
+inputs:
+  command:
+    description: 'Command to run (lint or changelog)'
+    required: true
+  args:
+    description: 'Additional arguments'
+    required: false
+
+runs:
+  using: 'docker'
+  image: 'src/main/docker/Dockerfile'
+  args:
+    - ${{ inputs.command }}
+    - ${{ inputs.args }}
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
