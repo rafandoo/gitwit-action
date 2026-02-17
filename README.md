@@ -69,6 +69,7 @@ jobs:
         uses: rafandoo/gitwit-action@v1
         with:
           command: lint
+```
 
 ## License 🔑
 
