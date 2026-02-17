@@ -11,7 +11,7 @@ inputs:
 
 runs:
   using: 'docker'
-  image: 'docker://ghcr.io/rafandoo/gitwit-action:v1.1.0-RC1'
+  image: 'docker://ghcr.io/rafandoo/gitwit-action:v1.1.0-RC2'
   args:
     - ${{ inputs.command }}
     - ${{ inputs.args }}
