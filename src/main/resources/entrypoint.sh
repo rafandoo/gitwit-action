@@ -4,6 +4,13 @@ set -e
 COMMAND="$1"
 shift
 
+ARGS=""
+for arg in "$@"; do
+  if [ -n "$arg" ]; then
+    ARGS="$ARGS \"$arg\""
+  fi
+done
+
 case "$COMMAND" in
   lint|changelog)
 
@@ -13,12 +20,21 @@ case "$COMMAND" in
       BASE=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
       HEAD=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
 
-      echo "Using range: $BASE..$HEAD"
+      RANGE="$BASE..$HEAD"
 
-      java -jar /app/gitwit.jar "$COMMAND" "$BASE..$HEAD" "$@"
+      echo "Using range: $RANGE"
+
+      if [ -n "$ARGS" ]; then
+        java -jar /app/gitwit.jar "$COMMAND" "$RANGE" "$ARGS"
+      else
+        java -jar /app/gitwit.jar "$COMMAND" "$RANGE"
+      fi
     else
-      echo "Not a PR event. Running normally."
-      java -jar /app/gitwit.jar "$COMMAND" "$@"
+      if [ -n "$ARGS" ]; then
+        java -jar /app/gitwit.jar "$COMMAND" "$ARGS"
+      else
+        java -jar /app/gitwit.jar "$COMMAND"
+      fi
     fi
     ;;
   *)
