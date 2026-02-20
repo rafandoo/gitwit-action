@@ -5,15 +5,24 @@ inputs:
   command:
     description: 'Command to run (lint or changelog)'
     required: true
+  changelog_stdout:
+    description: 'Output changelog to stdout instead of file'
+    default: 'false'
+    required: false
   args:
     description: 'Additional arguments'
     required: false
+
+outputs:
+  changelog:
+    description: 'Changelog content (only when changelog_stdout=true)'
 
 runs:
   using: 'docker'
   image: 'docker://ghcr.io/rafandoo/gitwit-action:v1.1.0-RC2'
   args:
     - ${{ inputs.command }}
+    - ${{ inputs.changelog_stdout }}
     - ${{ inputs.args }}
 
 branding:

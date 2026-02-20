@@ -2,44 +2,52 @@
 set -e
 
 COMMAND="$1"
-shift
+CHANGELOG_STDOUT="$2"
+shift 2
 
-ARGS=""
-for arg in "$@"; do
-  if [ -n "$arg" ]; then
-    ARGS="$ARGS \"$arg\""
+ARGS="$@"
+
+run_gitwit() {
+  java -jar /app/gitwit.jar "$@"
+}
+
+get_pr_range() {
+  BASE=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
+  HEAD=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
+  echo "$BASE..$HEAD"
+}
+
+is_pr_event() {
+  [ "$GITHUB_EVENT_NAME" = "pull_request" ]
+}
+
+if [ "$COMMAND" = "changelog" ]; then
+  if [ "$CHANGELOG_STDOUT" = "true" ]; then
+    echo "📝 Generating changelog to stdout"
+
+    OUTPUT=$(run_gitwit changelog --stdout $ARGS)
+
+    echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+    echo "$OUTPUT" >> "$GITHUB_OUTPUT"
+    echo "EOF" >> "$GITHUB_OUTPUT"
+
+  else
+    echo "📝 Generating changelog to file"
+
+    run_gitwit changelog $ARGS
   fi
-done
-
-case "$COMMAND" in
-  lint|changelog)
-
-    if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+elif [ "$COMMAND" = "lint" ]; then
+    if is_pr_event; then
       echo "Detected pull request event"
-
-      BASE=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
-      HEAD=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
-
-      RANGE="$BASE..$HEAD"
-
+      RANGE=$(get_pr_range)
       echo "Using range: $RANGE"
-
-      if [ -n "$ARGS" ]; then
-        java -jar /app/gitwit.jar "$COMMAND" "$RANGE" "$ARGS"
-      else
-        java -jar /app/gitwit.jar "$COMMAND" "$RANGE"
-      fi
+      run_gitwit lint "$RANGE" $ARGS
     else
-      if [ -n "$ARGS" ]; then
-        java -jar /app/gitwit.jar "$COMMAND" "$ARGS"
-      else
-        java -jar /app/gitwit.jar "$COMMAND"
-      fi
+      run_gitwit lint $ARGS
     fi
-    ;;
-  *)
-    echo "❌ Invalid command: $COMMAND"
-    echo "Allowed commands: lint, changelog"
-    exit 1
-    ;;
-esac
+
+else
+  echo "❌ Invalid command: $COMMAND"
+  echo "Allowed commands: lint, changelog"
+  exit 1
+fi

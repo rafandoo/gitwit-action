@@ -1,8 +1,9 @@
 name: Release Deployment
 
 on:
-  release:
-    types: [ published ]
+  push:
+    tags:
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
@@ -13,6 +14,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  determine-release-type:
+    name: Determine Release Type
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      is-pre-release: ${{ steps.determine.outputs.is-pre-release }}
+      tag-name: ${{ github.ref_name }}
+
+    steps:
+      - name: Determine Release Type
+        id: determine
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+            if [[ "$TAG" == *"-"* ]]; then
+                echo "This is a pre-release version."
+                echo "is-pre-release=true" >> $GITHUB_OUTPUT
+            else
+                echo "This is a stable release version."
+                echo "is-pre-release=false" >> $GITHUB_OUTPUT
+            fi
+
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:
@@ -54,3 +78,21 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  release:
+    name: Publish Release Artifacts
+    runs-on: ubuntu-latest
+    needs: [ determine-release-type, build-and-push-image ]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.determine-release-type.outputs.tag-name }}
+          name: ${{ needs.determine-release-type.outputs.tag-name }}
+          draft: false
+          prerelease: ${{ needs.determine-release-type.outputs.is-pre-release }}
+          body: |
+            **${{ needs.determine-release-type.outputs.tag-name }}**
