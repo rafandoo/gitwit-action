@@ -9,6 +9,10 @@ inputs:
     description: 'Output changelog to stdout instead of file'
     default: 'false'
     required: false
+  changelog_from_latest_release:
+    description: 'Generate changelog from the latest release'
+    default: 'false'
+    required: false
   args:
     description: 'Additional arguments'
     required: false
@@ -23,6 +27,7 @@ runs:
   args:
     - ${{ inputs.command }}
     - ${{ inputs.changelog_stdout }}
+    - ${{ inputs.changelog_from_latest_release }}
     - ${{ inputs.args }}
 
 branding:
