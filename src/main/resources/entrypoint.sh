@@ -6,6 +6,11 @@ CHANGELOG_STDOUT="$2"
 CHANGELOG_FROM_LATEST_RELEASE="$3"
 shift 3
 
+set --
+for arg in "$@"; do
+  [ -n "$arg" ] && set -- "$@" "$arg"
+done
+
 run_gitwit() {
   java -jar /app/gitwit.jar "$@"
 }
@@ -31,9 +36,17 @@ get_latest_release_tag() {
     jq -r '.tag_name // empty'
 }
 
+debug_args() {
+  echo "➡️ gitwit will be executed with arguments:"
+  i=0
+  for arg in "$@"; do
+    echo "  [$i] = <$arg>"
+    i=$((i + 1))
+  done
+}
+
 case "$COMMAND" in
   "changelog")
-  set -- "$@"
 
     if [ "$CHANGELOG_FROM_LATEST_RELEASE" = "true" ]; then
       echo "🔍 Fetching latest release tag"
@@ -72,6 +85,9 @@ case "$COMMAND" in
       echo "Detected pull request event"
       RANGE=$(get_pr_range)
       echo "Using range: $RANGE"
+
+      debug_args lint "$@" "$RANGE"
+
       run_gitwit lint "$@" "$RANGE"
     else
       run_gitwit lint "$@"
