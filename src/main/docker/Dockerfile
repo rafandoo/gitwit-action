@@ -1,7 +1,6 @@
 FROM eclipse-temurin:21.0.10_7-jre
 
 ENV DEBIAN_FRONTEND=noninteractive
-
 ENV GITWIT_ENV=ci
 
 WORKDIR /app

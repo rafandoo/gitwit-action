@@ -4,19 +4,37 @@ set -eu
 COMMAND="$1"
 CHANGELOG_STDOUT="$2"
 CHANGELOG_FROM_LATEST_RELEASE="$3"
-shift 3
+LINT_AUTO_DETECT_PR="$4"
+shift 4
 
 set --
 for arg in "$@"; do
   [ -n "$arg" ] && set -- "$@" "$arg"
 done
 
+log() {
+  echo "▶ $*"
+}
+
+error() {
+  echo "❌ $*" >&2
+  exit 1
+}
+
+is_debug() {
+  [ "${ACTIONS_STEP_DEBUG:-false}" = "true" ]
+}
+
 run_gitwit() {
-  java -jar /app/gitwit.jar "$@"
+  if is_debug; then
+    java -jar /app/gitwit.jar --debug "$@"
+  else
+    java -jar /app/gitwit.jar "$@"
+  fi
 }
 
 is_pr_event() {
-  [ "$GITHUB_EVENT_NAME" = "pull_request" ]
+  [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]
 }
 
 get_pr_range() {
@@ -36,56 +54,62 @@ get_latest_release_tag() {
     jq -r '.tag_name // empty'
 }
 
+generate_changelog() {
+  if [ "$CHANGELOG_FROM_LATEST_RELEASE" = "true" ]; then
+    log "Fetching latest release tag"
+
+    TAG=$(get_latest_release_tag || true)
+
+    if [ -n "$TAG" ]; then
+      : "${GITHUB_REF_NAME:?GITHUB_REF_NAME not set}"
+      RANGE="$TAG..$GITHUB_REF_NAME"
+      log "Using range: $RANGE"
+      set -- "$@" "$RANGE"
+    else
+      log "No previous releases found."
+    fi
+  fi
+
+  if [ "$CHANGELOG_STDOUT" = "true" ]; then
+    log "Generating changelog to stdout"
+
+    OUTPUT=$(run_gitwit changelog --stdout "$@")
+
+    : "${GITHUB_OUTPUT:?GITHUB_OUTPUT not set}"
+    {
+      echo "changelog<<EOF"
+      echo "$OUTPUT"
+      echo "EOF"
+    } >> "$GITHUB_OUTPUT"
+  else
+    log "Generating changelog to file"
+    run_gitwit changelog "$@"
+  fi
+}
+
+run_lint() {
+  if is_pr_event && [ "$LINT_AUTO_DETECT_PR" = "true" ]; then
+    log "Detected pull request event"
+
+    RANGE=$(get_pr_range)
+    log "Using range: $RANGE"
+
+    run_gitwit lint "$@" "$RANGE"
+  else
+    run_gitwit lint "$@"
+  fi
+}
+
 case "$COMMAND" in
   "changelog")
-
-    if [ "$CHANGELOG_FROM_LATEST_RELEASE" = "true" ]; then
-      echo "🔍 Fetching latest release tag"
-
-      TAG=$(get_latest_release_tag || true)
-
-      if [ -n "$TAG" ]; then
-        : "${GITHUB_REF_NAME:?GITHUB_REF_NAME not set}"
-        RANGE="$TAG..$GITHUB_REF_NAME"
-        echo "Using range: $RANGE"
-        set -- "$@" "$RANGE"
-      else
-        echo "No previous releases found."
-      fi
-    fi
-
-    if [ "$CHANGELOG_STDOUT" = "true" ]; then
-      echo "📝 Generating changelog to stdout"
-
-      OUTPUT=$(run_gitwit changelog --stdout "$@")
-
-      : "${GITHUB_OUTPUT:?GITHUB_OUTPUT not set}"
-      {
-        echo "changelog<<EOF"
-        echo "$OUTPUT"
-        echo "EOF"
-      } >> "$GITHUB_OUTPUT"
-    else
-      echo "📝 Generating changelog to file"
-      run_gitwit changelog "$@"
-    fi
+    generate_changelog
     ;;
 
   "lint")
-    if is_pr_event; then
-      echo "Detected pull request event"
-      RANGE=$(get_pr_range)
-      echo "Using range: $RANGE"
-
-      run_gitwit lint "$@" "$RANGE"
-    else
-      run_gitwit lint "$@"
-    fi
+    run_lint
     ;;
 
   *)
-    echo "❌ Invalid command: $COMMAND"
-    echo "Allowed commands: lint, changelog"
-    exit 1
+    error "Invalid command: $COMMAND - Allowed commands: lint, changelog"
     ;;
 esac

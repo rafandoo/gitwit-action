@@ -5,21 +5,29 @@ inputs:
   command:
     description: 'Command to run (lint or changelog)'
     required: true
+
+  args:
+    description: 'Additional arguments passed to GitWit'
+    required: false
+
   changelog_stdout:
     description: 'Output changelog to stdout instead of file'
     default: 'false'
     required: false
+
   changelog_from_latest_release:
     description: 'Generate changelog from the latest release'
     default: 'false'
     required: false
-  args:
-    description: 'Additional arguments'
+
+  lint_auto_detect_pr:
+    description: 'Automatically detect PR commit range'
+    default: 'true'
     required: false
 
 outputs:
   changelog:
-    description: 'Changelog content (only when changelog_stdout=true)'
+    description: 'Generated changelog content (only when changelog_stdout=true)'
 
 runs:
   using: 'docker'
@@ -28,6 +36,7 @@ runs:
     - ${{ inputs.command }}
     - ${{ inputs.changelog_stdout }}
     - ${{ inputs.changelog_from_latest_release }}
+    - ${{ inputs.lint_auto_detect_pr }}
     - ${{ inputs.args }}
 
 branding:
