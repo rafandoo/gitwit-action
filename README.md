@@ -31,6 +31,8 @@ It enables:
 
 Designed for teams that value structured commits and automated release workflows.
 
+> The complete documentation can be viewed [here.](https://rafandoo.dev/gitwit/reference/actions/overview)
+
 ---
 
 ## 📦 Supported Commands
@@ -46,15 +48,15 @@ Only these commands are allowed.
 
 ## 🛠 Usage
 
-### Basic Example
+### Basic example
 
 ```yaml
 name: GitWit CI
 
 on:
   pull_request:
-  push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   gitwit:
@@ -63,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # Required for commit range detection
+          fetch-depth: 0
 
       - name: Run GitWit Lint
         uses: rafandoo/gitwit-action@v1
@@ -71,8 +73,101 @@ jobs:
           command: lint
 ```
 
+### Inputs
+
+| Input                           | Description                                                                                    | Required | Default |
+|---------------------------------|------------------------------------------------------------------------------------------------|:--------:|:-------:|
+| `command`                       | Define which GitWit command will be executed (`lint` or `changelog`)                           |    ✔     |    -    |
+| `changelog_stdout`              | Sends the generated changelog to the default output (_stdout_) instead of saving it in a file. |    ✖     | `false` |
+| `changelog_from_latest_release` | Generates the changelog only from commits since the latest release instead of all commits.     |    ✖     | `false` |
+| `args`                          | Additional arguments passed directly to the command of GitWit.                                 |    ✖     |    -    |
+
+### Outputs
+
+| Output      | Description                                                               |
+|-------------|---------------------------------------------------------------------------|
+| `changelog` | Generated changelog content (available only when `changelog_stdout=true`) |
+
+### Lint
+
+The **lint** command validates commit messages using the rules configured in GitWit.
+
+This validation helps maintain a consistent commit history, ensuring that all messages follow the project-defined pattern and remain compatible with features like automatic changelog generation.
+
+#### Example of use
+
+```yaml
+name: GitWit CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  gitwit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run GitWit Lint
+        uses: rafandoo/gitwit-action@v1
+        with:
+          command: lint
+```
+
+### Changelog
+
+The **changelog** command automatically generates a changelog from the repository’s commit messages.
+
+Depending on the configuration used in the workflow, the changelog can:
+
+- update or create the `CHANGELOG.md` file;
+- be sent to stdout for use in other steps;
+- consider only commits since the last release.
+
+#### Full release example
+
+The example below demonstrates a workflow that generates changelog automatically when creating a tag and uses the result as a description of a **GitHub Release**.
+
+```yaml
+name: Release Deployment
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Generate Changelog
+        id: gitwit
+        uses: rafandoo/gitwit-action@v1
+        with:
+          command: changelog
+          changelog_stdout: true
+          changelog_from_latest_release: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ${{ steps.gitwit.outputs.changelog }}
+```
+
 ## License 🔑
 
 This project is licensed under the [Apache License 2.0](https://github.com/rafandoo/gitwit-action/blob/7aed724d12444c6a02351e83c271fd1294dcac21/LICENSE)
 
-Copyright :copyright: 2025-present - Rafael Camargo
+Copyright :copyright: 2026-present - Rafael Camargo

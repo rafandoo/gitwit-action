@@ -9,7 +9,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl jq ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ARG GITWIT_VERSION=1.1.0-RC2
+ARG GITWIT_VERSION=1.1.0
 
 RUN curl -fsSL \
     -o gitwit.jar \

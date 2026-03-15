@@ -1,6 +1,6 @@
 root = true
 
-[*.{yml,yaml,toml,json,md,gitwit,sh}]
+[*.{yml,yaml,json,md,gitwit,sh}]
 indent_size = 2
 charset = utf-8
 indent_style = space
